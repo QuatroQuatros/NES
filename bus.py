@@ -1,50 +1,68 @@
+from cpu import CPU
+from ppu import PPU
+from cartucho import Cartucho
+
 class BUS:
-    def __init__(self, cpu):
-        self.cpu = cpu
-        self.ram = [0] * (64*1024)
+    def __init__(self, rom):
+        #Dispositivos conectados
+        self.cpu = CPU(self)
+        self.cartucho = Cartucho(rom)
+        self.ppu = PPU(self.cartucho)
+        #memoria da CPU
+        self.cpu_ram = [0] * (2048)
 
-        rom = 'jogos/teste.4444'
-        #rom = 'jogos/4444.bin'
-        #rom = 'jogos/o6502-2022-10-15-161248.bin'
-        #rom = 'jogos/Castlevania.nes'
-        # rom = ['A2', '0A', '8E', '00', '00', 'A2', '03', '8E', '01', '00', 'AC', '00', '00', 'A9', '00', '18', '6D', '01', '00', '88', 'D0', 'FA', '8D', '02', '00', 'EA', 'EA', 'EA']
+        #contador
+        self.system_clock_counter = 0
 
-        # for i in range(len(rom)):
-        #     self.ram[0x8000 + i] = hex(rom[i])
-        # print(self.ram[0x800:0x8020])
-        # input()
+        self.cpu.reset()
 
+        # rom = 'jogos/teste.4444'
+        # #rom = 'jogos/4444.bin'
+        # #rom = 'jogos/o6502-2022-10-15-161248.bin'
+        # #rom = 'jogos/Castlevania.nes'
 
-        with open(rom, 'rb') as f:
-            byte = f.read()
-            print(byte)
-            input()
-            for i in range(len(byte)):
-                self.ram[0x8000 + i] = byte[i]
-        print(self.ram[0x8000:0x802C])
-        print(self.ram[0x8010:0x8016])
-        self.ram[0xFFFC] = 0x00
-        self.ram[0xFFFD] = 0x80
+        # with open(rom, 'rb') as f:
+        #     byte = f.read()
+        #     print(byte)
+        #     input()
+        #     for i in range(len(byte)):
+        #         self.cpuRam[0x8000 + i] = byte[i]
+        # print(self.cpuRam[0x8000:0x802C])
+        # print(self.cpuRam[0x8010:0x8016])
+        # self.cpuRam[0xFFFC] = 0x00
+        # self.cpuRam[0xFFFD] = 0x80
 
     
         
 
 
-    def write(self, addr, data):
-        if(addr >= 0x0000 and addr <= 0xFFFF):
-            self.ram[addr] = data
+    def cpu_write(self, addr, data):
+        if(self.cartucho.cpu_write(addr, data)):
+            pass
 
-    def read(self, addr, readonly = False):
-        if addr >= 0x0000 and addr <= 0xFFFF:
-            return self.ram[addr]
-        return 0x00
+        elif addr >= 0x0000 and addr <= 0x1FFF:
+            self.cpu_ram[addr & 0x07FF] = data
+        elif (addr >= 0x2000 and addr <= 0x3FFF):
+            self.ppu.cpu_write(addr & 0x0007, data)
+
+    def cpu_read(self, addr, readonly = False):
+        data = 0x00
+        if(self.cartucho.cpu_read(addr, data)):
+            pass
+        elif addr >= 0x0000 and addr <= 0x1FFF:
+            data = self.cpu_ram[addr & 0x07FF]
+        elif (addr >= 0x2000 and addr <= 0x3FFF):
+            data = self.ppu.cpu_read(addr & 0x0007, readonly)
+        return data
         
+    def clock(self):
+        self.ppu.clock()
+        if(self.system_clock_counter % 3 == 0):
+            self.cpu.clock()
+        else:
+            self.system_clock_counter += 1
 
-    def load(self):
+    def draw(self, status, pc, a, x, y, stack, opcode):
+        self.ppu.draw(status, pc, a, x, y, stack, opcode, self.cpu_ram[0x00:0x10])
 
-        with open(rom, 'rb') as f:
-            byte = f.read()
-            print(byte)
-            input()
-            for i in range(len(byte)):
-                self.ram[0x8000 + i] = byte[i]
+

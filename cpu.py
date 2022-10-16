@@ -1,13 +1,13 @@
-from bus import BUS
+# from bus import BUS
 
 class CPU:
-    def __init__(self):
-        self.bus = BUS(self)
+    def __init__(self, bus):
+        # self.bus = BUS(self)
+        self.bus = bus
         self.a = 0x00 #ACCUMULATOR
         self.x = 0x00 #REGISTER
         self.y = 0x00 #REGISTER
         self.stack = 0x00 #STACK POINTER
-        # self.pc = 0x0000  #PROGRAM COUNTER
         self.pc = 0x0000  #PROGRAM COUNTER
         self.status = 0x00 #STATUS REGISTER
 
@@ -50,15 +50,15 @@ class CPU:
             0XF0:{ "OPCODE": self.BEQ, "ADDR": self.REL, "CYCLES": 2 }, 0xF1:{ "OPCODE": self.SBC, "ADDR": self.IZY, "CYCLES": 5 }, 0xF2:{ "OPCODE": self.XXX, "ADDR": self.IMP, "CYCLES": 2 }, 0xF3:{ "OPCODE": self.XXX, "ADDR": self.IMP, "CYCLES": 8 }, 0xF4:{ "OPCODE": self.NOP, "ADDR": self.IMP, "CYCLES": 4 }, 0xF5:{ "OPCODE": self.SBC, "ADDR": self.ZPX, "CYCLES": 4 }, 0xF6:{ "OPCODE": self.INC, "ADDR": self.ZPX, "CYCLES": 6 }, 0xF7:{ "OPCODE": self.XXX, "ADDR": self.IMP, "CYCLES": 6 }, 0xF8:{ "OPCODE": self.SED, "ADDR": self.IMP, "CYCLES": 2 }, 0xF9:{ "OPCODE": self.SBC, "ADDR": self.ABY, "CYCLES": 4 }, 0xFA:{ "OPCODE": self.NOP, "ADDR": self.IMP, "CYCLES": 2 }, 0xFB:{ "OPCODE": self.XXX, "ADDR": self.IMP, "CYCLES": 7 }, 0xFC:{ "OPCODE": self.NOP, "ADDR": self.IMP, "CYCLES": 4 }, 0xFD:{ "OPCODE": self.SBC, "ADDR": self.ABX, "CYCLES": 4 }, 0xFE:{ "OPCODE": self.INC, "ADDR": self.ABX, "CYCLES": 7 }, 0xFF:{ "OPCODE": self.XXX, "ADDR": self.IMP, "CYCLES": 7 },
         }
 
-        if(self.bus.ram[0xFFFD] == 0x80):
-            self.reset()
+        # if(self.bus.ram[0xFFFD] == 0x80):
+        #     self.reset()
 
     #BUS
     def read(self, addr, readonly = False):
-        return self.bus.read(addr, False)
+        return self.bus.cpu_read(addr, False)
 
     def write(self, addr, data):
-        self.bus.write(addr, data)
+        self.bus.cpu_write(addr, data)
 
     def getFlag(self, f):
         if((self.status & self.flags[f]) > 0):
@@ -752,27 +752,6 @@ class CPU:
         if(self.cycles == 0):
             self.opcode = self.read(self.pc)
             self.setFlag('U', True)
-            a = f'''
-            -------------------
-            execução
-            RAM :Page 0000: {self.bus.ram[0:16]}
-            STATUS: {hex(self.status)}
-            PC: {hex(self.pc)}
-            A: Hex:{hex(self.a)} Dec:{self.a}
-            X: Hex:{hex(self.x)} Dec:{self.x}
-            Y: Hex:{hex(self.y)} Dec:{self.y}
-            STACK: {hex(self.stack)}
-
-            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
-            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
-
-            OPCODE: {hex(self.opcode)} Dec:{self.opcode}
-            CYCLES: {self.cycles}
-
-            ------------------
-            '''
-            print(a)
-            input()
             self.pc += 1
 
             self.cycles = self.lookup[self.opcode]['CYCLES']
@@ -781,27 +760,7 @@ class CPU:
             self.cycles += (add_cycle & add_cycle2)
             self.setFlag('U', True)
 
-            a = f'''
-            -------------------
-            resultado
-            RAM :Page 0000: {self.bus.ram[0:16]}
-            STATUS: {hex(self.status)}
-            PC: {hex(self.pc)}
-            A: Hex:{hex(self.a)} Dec:{self.a}
-            X: Hex:{hex(self.x)} Dec:{self.x}
-            Y: Hex:{hex(self.y)} Dec:{self.y}
-            STACK: {hex(self.stack)}
-
-            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
-            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
-
-            OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
-            CYCLES: {self.cycles}
-
-            ------------------
-            '''
-            print(a)
-            input()
+            self.bus.draw(self.status, self.pc, self.a, self.x, self.y, self.stack, self.opcode)
 
 
         self.clock_count += 1
