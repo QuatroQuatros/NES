@@ -14,26 +14,19 @@ class BUS:
         #contador
         self.system_clock_counter = 0
 
-        self.cpu.reset()
+        
 
-        # rom = 'jogos/teste.4444'
-        # #rom = 'jogos/4444.bin'
-        # #rom = 'jogos/o6502-2022-10-15-161248.bin'
-        # #rom = 'jogos/Castlevania.nes'
 
-        # with open(rom, 'rb') as f:
-        #     byte = f.read()
-        #     print(byte)
-        #     input()
-        #     for i in range(len(byte)):
-        #         self.cpuRam[0x8000 + i] = byte[i]
-        # print(self.cpuRam[0x8000:0x802C])
-        # print(self.cpuRam[0x8010:0x8016])
-        # self.cpuRam[0xFFFC] = 0x00
-        # self.cpuRam[0xFFFD] = 0x80
+        if(self.cartucho.imageValid()):
+            self.reset()
+            print(self.cartucho.vPRGMemory[0xFFFC:0xFFFD])
+            input()
+
 
     
-        
+    def reset(self):
+        self.system_clock_counter = 0
+        self.cpu.reset()
 
 
     def cpu_write(self, addr, data):
@@ -47,6 +40,7 @@ class BUS:
 
     def cpu_read(self, addr, readonly = False):
         data = 0x00
+        print('bus', addr)
         if(self.cartucho.cpu_read(addr, data)):
             pass
         elif addr >= 0x0000 and addr <= 0x1FFF:
@@ -59,10 +53,18 @@ class BUS:
         self.ppu.clock()
         if(self.system_clock_counter % 3 == 0):
             self.cpu.clock()
-        else:
-            self.system_clock_counter += 1
+
+        if(self.ppu.nmi):
+            self.ppu.nmi = False
+            self.cpu.nmi()
+
+        self.system_clock_counter += 1
+
 
     def draw(self, status, pc, a, x, y, stack, opcode):
         self.ppu.draw(status, pc, a, x, y, stack, opcode, self.cpu_ram[0x00:0x10])
+
+    def incPalette(self):
+        self.ppu.incPalette()
 
 

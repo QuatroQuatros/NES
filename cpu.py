@@ -55,7 +55,10 @@ class CPU:
 
     #BUS
     def read(self, addr, readonly = False):
-        return self.bus.cpu_read(addr, False)
+        # return self.bus.cpu_read(addr, False)
+        a = self.bus.cpu_read(addr, False)
+        print('addr', addr, a)
+        return a
 
     def write(self, addr, data):
         self.bus.cpu_write(addr, data)
@@ -68,18 +71,17 @@ class CPU:
     def setFlag(self, f, v):
         if (v == True):
             self.status |= self.flags[f]
-            print('to na flag True', f)
+
         else:
             self.status &= self.flags[f]
-            print('to na flag False', f)
-
 
 
     def reset(self):
-
         self.addr_abs = 0xFFFC
         low = self.read(self.addr_abs + 0)
         high = self.read(self.addr_abs + 1)
+        print(low, high)
+        input()
 
         self.pc = (high << 8) | low
 
@@ -88,7 +90,7 @@ class CPU:
         self.y = 0
         self.stack = 0xFD
         # self.status =0x00
-        self.status =0x00 | self.flags['U']
+        self.status = (0x00 | self.flags['U'])
         self.addr_rel = 0x0000
         self.addr_abs = 0x0000
         self.fetched = 0x00
@@ -146,6 +148,8 @@ class CPU:
         self.status = self.read(0x0100 + self.stack)
         # self.status &= ~B
         # self.status &= ~U
+        self.status &= self.flags['B']
+        self.status &= self.flags['U']
 
         self.stack += 1
         self.pc = self.read(0x0100 + self.stack)
@@ -155,13 +159,10 @@ class CPU:
 
     #ADDRESING MODES
     def IMP(self):
-        print('IMP')
         self.fetched = self.a
         return 0
 
     def IMM(self):
-        print('IMM')
-
         # self.addr_abs = (self.pc + 1)
         #self.pc += 1
         self.addr_abs = self.pc
@@ -169,14 +170,13 @@ class CPU:
         return 0
 
     def ZP0(self):
-        print('ZP0')
         self.addr_abs = self.read(self.pc)
         self.pc += 1
         self.addr_abs &= 0x00FF
         return 0
 
     def ZPX(self):
-        self.addr_abs = self.read(self.pc) + self.x
+        self.addr_abs = (self.read(self.pc) + self.x)
         self.pc += 1
         self.addr_abs &= 0x00FF
         return 0
@@ -459,6 +459,7 @@ class CPU:
         return 0
 
     def CLD(self):
+        print('CLD')
         self.setFlag('D', False)
         return 0
 
@@ -693,6 +694,7 @@ class CPU:
         return 0
 
     def SEI(self):
+        print('SEI')
         self.setFlag('I', True)
         return 0
 
@@ -754,11 +756,50 @@ class CPU:
             self.setFlag('U', True)
             self.pc += 1
 
+
+            a = f'''
+            -------------------
+            resultado
+            STATUS: {hex(self.status)}
+            PC: {hex(self.pc)}
+            A: Hex:{hex(self.a)} Dec:{self.a}
+            X: Hex:{hex(self.x)} Dec:{self.x}
+            Y: Hex:{hex(self.y)} Dec:{self.y}
+            STACK: {hex(self.stack)}
+            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
+            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
+            MAPPER: {self.bus.cartucho.mapper.id}
+            OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
+            CYCLES: {self.cycles}
+            ------------------
+            '''
+            print(a)
+            input()
+
+
             self.cycles = self.lookup[self.opcode]['CYCLES']
             add_cycle = self.lookup[self.opcode]['ADDR']()
             add_cycle2 = self.lookup[self.opcode]['OPCODE']()
             self.cycles += (add_cycle & add_cycle2)
             self.setFlag('U', True)
+            a = f'''
+            -------------------
+            resultado
+            STATUS: {hex(self.status)}
+            PC: {hex(self.pc)}
+            A: Hex:{hex(self.a)} Dec:{self.a}
+            X: Hex:{hex(self.x)} Dec:{self.x}
+            Y: Hex:{hex(self.y)} Dec:{self.y}
+            STACK: {hex(self.stack)}
+            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
+            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
+            MAPPER: {self.bus.cartucho.mapper.id}
+            OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
+            CYCLES: {self.cycles}
+            ------------------
+            '''
+            print(a)
+            input()
 
             self.bus.draw(self.status, self.pc, self.a, self.x, self.y, self.stack, self.opcode)
 

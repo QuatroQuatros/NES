@@ -9,6 +9,7 @@ class Cartucho:
         self.nCHRBanks = 0
 
         self.vPRGMemory = [0]
+        self.vCHRMemory = [0]
 
         self.header_size = 0x10
 
@@ -22,10 +23,12 @@ class Cartucho:
         self.tv_system2 = 0
         self.unused = [0] * 5
 
+        self.mirrors = ['HORIZONTAL','VERTICAL','ONESCREEN_LO','ONESCREEN_HI']
+        self.mirror = self.mirrors[0]
+        self.bImageValid = False
+
         with open(self.rom, 'rb') as f:
             byte = f.read()
-            # print(byte)
-            # input()
             for i in range(self.header_size):
                 if( i <= 3):
                     self.name[i] = byte[i]
@@ -45,26 +48,38 @@ class Cartucho:
                     self.tv_system2 = byte[i]
                 else:
                     pass
+            print(self.name[0:3], self.prg_rom_chunks, self.chr_rom_chunks, self.mapper1, self.mapper2)
+            input()
 
-            if(self.mapper1 & 0x04):
-                pass
+            if(self.mapper1 & 0x04 != 0):
+                print('to aqui')
 
             #Mapper ID
             self.nMapperId = ((self.mapper2 >> 4) << 4) | (self.mapper1 >> 4)
+
+            if(self.mapper1 & 0x01 == 1):
+                self.mirror = self.mirrors[1]
+
+                
 
             #File format
             self.nFileType = 1
 
             if(self.nFileType == 0):
                 pass
+
             elif(self.nFileType == 1):
+
                 self.nPRGBanks = self.prg_rom_chunks
-                self.vPRGMemory = bytearray(self.nPRGBanks * 16384)
+                self.vPRGMemory = [0] * (self.nPRGBanks * 16384)
                 for i in range(len(self.vPRGMemory)):
                     self.vPRGMemory[i] = byte[i]
 
                 self.nCHRBanks = self.chr_rom_chunks
-                self.vCHRMemory = bytearray(self.nCHRBanks * 8192)
+                if(self.nCHRBanks == 0):
+                     self.vCHRMemory = [0]*(8192)
+                else:   
+                    self.vCHRMemory = [0]*(self.nCHRBanks * 8192)
                 for i in range(len(self.vCHRMemory)):
                     self.vCHRMemory[i] = byte[i]
 
@@ -73,18 +88,23 @@ class Cartucho:
                 pass
 
             if(self.nMapperId == 0):
-                self.mapper = Mapper_000(self.nPRGBanks, self.nCHRBanks)
-                print(self.vCHRMemory)
-                # input()
+                self.mapper = Mapper_000(self.nPRGBanks, self.nCHRBanks, self.nMapperId)
             #n tem isso
             else:
+                self.mapper = Mapper_000(self.nPRGBanks, self.nCHRBanks, self.nMapperId)
                 pass
+            self.bImageValid = True
 
+
+    def imageValid(self):
+        return self.bImageValid
 
     def cpu_read(self, addr, data):
         mapped_addr = 0
+        print('cartucho', addr, data)
         if(self.mapper.cpu_map_read(addr, mapped_addr)):
             data = self.vPRGMemory[mapped_addr]
+            print('cartucho 2', addr, data)
             return True
         else:
             return False
