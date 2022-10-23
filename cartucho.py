@@ -103,29 +103,29 @@ class Cartucho:
     def imageValid(self):
         return self.bImageValid
 
-    # def cpu_read(self, addr, data):
-    #     mapped_addr = 0
-
-    #     if(self.mapper.cpu_map_read(addr, mapped_addr)):
-    #         print('MEMORIA', hex(self.vPRGMemory[0x3FFC]), hex(self.vPRGMemory[0x3FFD]))
-    #         input()
-    #         data = self.vPRGMemory[mapped_addr]
-    #         print('cartucho', hex(addr), hex(data))
-    #         return True
-    #     else:
-    #         return False
-
-
     def cpu_read(self, addr, data):
         mapped_addr = 0
-        mapped_addr = self.mapper.cpu_map_read(addr, mapped_addr)
-        print('cartucho', addr, data, mapped_addr)
-        if( mapped_addr != False):
+
+        if(self.mapper.cpu_map_read(addr, mapped_addr)):
+            print('MEMORIA', hex(self.vPRGMemory[0x3FFC]), hex(self.vPRGMemory[0x3FFD]))
+            input()
             data = self.vPRGMemory[mapped_addr]
-            print('cartucho 2', hex(addr), hex(data))
-            return data
+            print('cartucho', hex(addr), hex(data))
+            return True
         else:
             return False
+
+
+    # def cpu_read(self, addr, data):
+    #     mapped_addr = 0
+    #     mapped_addr = self.mapper.cpu_map_read(addr, mapped_addr)
+    #     print('cartucho', addr, data, mapped_addr)
+    #     if( mapped_addr != False):
+    #         data = self.vPRGMemory[mapped_addr]
+    #         print('cartucho 2', hex(addr), hex(data))
+    #         return data
+    #     else:
+    #         return False
 
     def cpu_write(self, addr, data):
         mapped_addr = 0

@@ -743,7 +743,7 @@ class CPU:
 
             a = f'''
             -------------------
-            resultado
+            Inicio
             STATUS: {hex(self.status)}
             PC: {hex(self.pc)}
             A: Hex:{hex(self.a)} Dec:{self.a}

@@ -10,8 +10,8 @@ from bus import BUS
 
 # rom = 'jogos/Castlevania.nes'
 #rom = 'jogos/teste.4444'
-rom = 'jogos/DonkeyKong.nes'
-#rom = 'jogos/SuperMarioBros.nes'
+#rom = 'jogos/DonkeyKong.nes'
+rom = 'jogos/SuperMarioBros.nes'
 #rom = 'jogos/cpu_dummy_reads.nes'
 bus = BUS(rom)
 
