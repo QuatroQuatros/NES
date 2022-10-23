@@ -48,7 +48,7 @@ class BUS:
     def cpu_read(self, addr, readonly = False):
         data = 0x00
         if(self.cartucho.cpu_read(addr, data)):
-            pass
+            print('entrei aqui')
         elif addr >= 0x0000 and addr <= 0x1FFF:
             data = self.cpu_ram[addr & 0x07FF]
         elif (addr >= 0x2000 and addr <= 0x3FFF):

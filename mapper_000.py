@@ -1,15 +1,18 @@
 from mapper import Mapper
 
 class Mapper_000(Mapper):
-    def __init__(self, prgBanks, chrBanks):
+    def __init__(self, prgBanks, chrBanks, id):
         self.nPRGBanks = prgBanks
         self.nCHRbanks = chrBanks
+        self.id = id
 
     def cpu_map_read(self, addr, mapped_addr):
         if(addr >= 0x8000 and addr <= 0xFFFF):
 
             if(addr & self.nPRGBanks > 1):
+                print('to aqui')
                 mapped_addr = 0x7FFF
+            print('n entrei ali aqui')
             mapped_addr = 0x3FFF
             return True
         return False

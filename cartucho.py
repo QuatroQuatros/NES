@@ -73,9 +73,9 @@ class Cartucho:
                 pass
 
             if(self.nMapperId == 0):
-                self.mapper = Mapper_000(self.nPRGBanks, self.nCHRBanks)
-                print(self.vCHRMemory)
-                # input()
+                self.mapper = Mapper_000(self.nPRGBanks, self.nCHRBanks, self.nMapperId)
+                print(self.vPRGMemory[0x3FFF])
+                input()
             #n tem isso
             else:
                 pass
@@ -84,6 +84,7 @@ class Cartucho:
     def cpu_read(self, addr, data):
         mapped_addr = 0
         if(self.mapper.cpu_map_read(addr, mapped_addr)):
+            print('passei aqui')
             data = self.vPRGMemory[mapped_addr]
             return True
         else:

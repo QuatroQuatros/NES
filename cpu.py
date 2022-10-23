@@ -68,38 +68,37 @@ class CPU:
     def setFlag(self, f, v):
         if (v == True):
             self.status |= self.flags[f]
-            print('to na flag True', f)
         else:
             self.status &= self.flags[f]
-            print('to na flag False', f)
 
-
-
-    def reset(self):
-
-        self.addr_abs = 0xFFFC
-        low = self.read(self.addr_abs + 0)
-        high = self.read(self.addr_abs + 1)
-
-        self.pc = (high << 8) | low
-
-        self.a = 0
-        self.x = 0
-        self.y = 0
-        self.stack = 0xFD
-        # self.status =0x00
-        self.status =0x00 | self.flags['U']
-        self.addr_rel = 0x0000
-        self.addr_abs = 0x0000
-        self.fetched = 0x00
-
-        self.cycles = 8
 
     def complete(self):
         if(self.cycles == 0):
             return 1
         return 0
 
+
+
+    def reset(self):
+
+        # self.addr_abs = 0xFFFC
+        # low = self.read(self.addr_abs + 0)
+        # high = self.read(self.addr_abs + 1)
+
+        # self.pc = (high << 8) | low
+
+        self.pc = 0x8000
+
+        self.a = 0
+        self.x = 0
+        self.y = 0
+        self.stack = 0xFD
+        self.status =0x00 | self.flags['U']
+        self.addr_rel = 0x0000
+        self.addr_abs = 0x0000
+        self.fetched = 0x00
+
+        self.cycles = 8
 
 
     def irq(self):
@@ -155,12 +154,10 @@ class CPU:
 
     #ADDRESING MODES
     def IMP(self):
-        print('IMP')
         self.fetched = self.a
         return 0
 
     def IMM(self):
-        print('IMM')
 
         # self.addr_abs = (self.pc + 1)
         #self.pc += 1
@@ -169,7 +166,6 @@ class CPU:
         return 0
 
     def ZP0(self):
-        print('ZP0')
         self.addr_abs = self.read(self.pc)
         self.pc += 1
         self.addr_abs &= 0x00FF
@@ -195,14 +191,11 @@ class CPU:
         # return 0
         self.addr_rel = self.read(self.pc)
         self.pc += 1
-        print(self.addr_rel, 'to aqui')
         if not(self.addr_rel & 0x80 >= 128 or self.addr_rel & 0x80 <= -128):
-            print(self.addr_rel, 'to dentro do IF')
             self.addr_rel |= 0xFF00
         return 0
 
     def ABS(self):
-        print('ABS')
         low = self.read(self.pc)
         self.pc += 1
         high = self.read(self.pc)
@@ -278,7 +271,6 @@ class CPU:
     #INSTRUCTIONS
 
     def fetch(self):
-        print(self.lookup[self.opcode]['ADDR'] != self.IMP)
         if(self.lookup[self.opcode]['ADDR'] != self.IMP):
             self.fetched = self.read(self.addr_abs)
         return self.fetched
@@ -286,7 +278,6 @@ class CPU:
 
 
     def ADC(self):
-        print('ADC')
         self.fetch()
         temp = self.a + self.fetched + self.getFlag('C')
         self.setFlag('C', temp > 255)
@@ -316,7 +307,6 @@ class CPU:
 
     #VER O ADDR
     def ASL(self):
-        print('ASL')
         self.fetch()
         temp = self.fetched << 1
         self.setFlag('C', (temp & 0xFF00) > 0)
@@ -326,7 +316,6 @@ class CPU:
             self.a = temp & 0x00FF
         else:
             self.write(self.addr_abs, temp & 0x00FF)
-            print('passei aqui')
         return 0
     
     def BCC(self):
@@ -381,7 +370,6 @@ class CPU:
         return 0
 
     def BNE(self):
-        print('BNE')
         # if(self.getFlag('Z') == 0):
         #     self.cycles += 1
         #     print(self.addr_abs, 'to aqui BNE')
@@ -395,8 +383,6 @@ class CPU:
 
         if(self.getFlag('Z') == 0):
             self.cycles += 1
-            print(self.bus.ram[self.addr_abs], self.bus.ram[self.addr_rel])
-            print(self.addr_rel, 'to aqui BNE')
             self.addr_abs = self.pc + self.addr_rel
 
             if ((self.addr_abs & 0xFF00) != (self.pc & 0xFF00)):
@@ -511,7 +497,6 @@ class CPU:
 
     def DEY(self):
         self.y -= 1
-        print('Y', self.y)
         self.setFlag('N', self.y & 0x80)
         self.setFlag('Z', self.y == 0x00)
 
@@ -559,7 +544,6 @@ class CPU:
         return 0
         
     def LDA(self):
-        print('LDA')
         self.fetch()
         self.a = self.fetched
         self.setFlag('Z', self.a == 0x00)
@@ -567,16 +551,13 @@ class CPU:
         return 1
 
     def LDX(self):
-        print('LDX')
         self.fetch()
         self.x = self.fetched
-        print(self.x)
         self.setFlag('Z', self.x == 0x00)
         self.setFlag('N', self.x & 0x80)
         return 1
 
     def LDY(self):
-        print('LDY')
         self.fetch()
         self.y = self.fetched
         self.setFlag('Z', self.y == 0x00)
@@ -701,7 +682,6 @@ class CPU:
         return 0
 
     def STX(self):
-        print('STX')
         self.write(self.addr_abs, self.x)
         return 0
 
@@ -752,6 +732,25 @@ class CPU:
         if(self.cycles == 0):
             self.opcode = self.read(self.pc)
             self.setFlag('U', True)
+
+            a = f'''
+            -------------------
+            Inicio
+            STATUS: {hex(self.status)}
+            PC: {hex(self.pc)}
+            A: Hex:{hex(self.a)} Dec:{self.a}
+            X: Hex:{hex(self.x)} Dec:{self.x}
+            Y: Hex:{hex(self.y)} Dec:{self.y}
+            STACK: {hex(self.stack)}
+            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
+            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
+            MAPPER: {self.bus.cartucho.mapper.id}
+            OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
+            CYCLES: {self.cycles}
+            ------------------
+            '''
+            print(a)
+            input()
             self.pc += 1
 
             self.cycles = self.lookup[self.opcode]['CYCLES']
@@ -759,6 +758,25 @@ class CPU:
             add_cycle2 = self.lookup[self.opcode]['OPCODE']()
             self.cycles += (add_cycle & add_cycle2)
             self.setFlag('U', True)
+
+            a = f'''
+            -------------------
+            resultado
+            STATUS: {hex(self.status)}
+            PC: {hex(self.pc)}
+            A: Hex:{hex(self.a)} Dec:{self.a}
+            X: Hex:{hex(self.x)} Dec:{self.x}
+            Y: Hex:{hex(self.y)} Dec:{self.y}
+            STACK: {hex(self.stack)}
+            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
+            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
+            MAPPER: {self.bus.cartucho.mapper.id}
+            OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
+            CYCLES: {self.cycles}
+            ------------------
+            '''
+            print(a)
+            input()
 
             self.bus.draw(self.status, self.pc, self.a, self.x, self.y, self.stack, self.opcode)
 
