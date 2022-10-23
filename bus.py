@@ -5,11 +5,11 @@ from cartucho import Cartucho
 class BUS:
     def __init__(self, rom):
         #Dispositivos conectados
-        self.cpu = CPU(self)
         self.cartucho = Cartucho(rom)
+        self.cpu = CPU(self)
         self.ppu = PPU(self.cartucho)
         #memoria da CPU
-        self.cpu_ram = [0] * (2048)
+        self.cpu_ram = [0] * 2048
 
         #contador
         self.system_clock_counter = 0
@@ -19,8 +19,8 @@ class BUS:
 
         if(self.cartucho.imageValid()):
             self.reset()
-            print(self.cartucho.vPRGMemory[0xFFFC:0xFFFD])
-            input()
+
+
 
 
     
@@ -35,18 +35,36 @@ class BUS:
 
         elif addr >= 0x0000 and addr <= 0x1FFF:
             self.cpu_ram[addr & 0x07FF] = data
+
         elif (addr >= 0x2000 and addr <= 0x3FFF):
             self.ppu.cpu_write(addr & 0x0007, data)
+
+    # def cpu_read(self, addr, readonly = False):
+    #     data = 0x00
+    #     print('bus', hex(addr))
+
+    #     if(self.cartucho.cpu_read(addr, data)):
+    #         pass
+
+    #     elif addr >= 0x0000 and addr <= 0x1FFF:
+    #         data = self.cpu_ram[addr & 0x07FF]
+
+    #     elif (addr >= 0x2000 and addr <= 0x3FFF):
+    #         data = self.ppu.cpu_read(addr & 0x0007, readonly)
+
+    #     return data
 
     def cpu_read(self, addr, readonly = False):
         data = 0x00
         print('bus', addr)
-        if(self.cartucho.cpu_read(addr, data)):
-            pass
-        elif addr >= 0x0000 and addr <= 0x1FFF:
+        if addr >= 0x0000 and addr <= 0x1FFF:
             data = self.cpu_ram[addr & 0x07FF]
+
         elif (addr >= 0x2000 and addr <= 0x3FFF):
             data = self.ppu.cpu_read(addr & 0x0007, readonly)
+
+        else:
+            data = self.cartucho.cpu_read(addr, data)
         return data
         
     def clock(self):

@@ -7,9 +7,9 @@ class PPU:
         pygame.init()
         pygame.font.init()
         self.cartucho = cartucho
-        self.tbl_name = [0, [0]*1024]
+        self.tbl_name = [[0]*1024, [0]*1024]
         self.tblPalette = [0] * 32
-        self.tblPattern = [0, [0]*4096]
+        self.tblPattern = [[0]*4096, [0]*4096]
         # self.tblPattern = [0] * 8192 #isso n é necessario
 
         self.frame_complete = False

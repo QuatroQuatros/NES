@@ -1,5 +1,3 @@
-# from bus import BUS
-
 class CPU:
     def __init__(self, bus):
         # self.bus = BUS(self)
@@ -55,10 +53,10 @@ class CPU:
 
     #BUS
     def read(self, addr, readonly = False):
-        # return self.bus.cpu_read(addr, False)
-        a = self.bus.cpu_read(addr, False)
-        print('addr', addr, a)
-        return a
+        return self.bus.cpu_read(addr, False)
+        # a = self.bus.cpu_read(addr, False)
+        # print('addr', addr, a)
+        # return a
 
     def write(self, addr, data):
         self.bus.cpu_write(addr, data)
@@ -77,20 +75,24 @@ class CPU:
 
 
     def reset(self):
-        self.addr_abs = 0xFFFC
-        low = self.read(self.addr_abs + 0)
-        high = self.read(self.addr_abs + 1)
-        print(low, high)
-        input()
-
-        self.pc = (high << 8) | low
 
         self.a = 0
         self.x = 0
         self.y = 0
         self.stack = 0xFD
-        # self.status =0x00
         self.status = (0x00 | self.flags['U'])
+
+        # self.addr_abs = 0xFFFC
+        # low = self.read(self.addr_abs + 0)
+        # high = self.read(self.addr_abs + 1)
+
+
+        # self.pc = (high << 8) | low
+        # print(hex(self.pc), hex(low), hex(high))
+        # input()
+
+        self.pc = 0x8000
+
         self.addr_rel = 0x0000
         self.addr_abs = 0x0000
         self.fetched = 0x00
@@ -195,14 +197,11 @@ class CPU:
         # return 0
         self.addr_rel = self.read(self.pc)
         self.pc += 1
-        print(self.addr_rel, 'to aqui')
         if not(self.addr_rel & 0x80 >= 128 or self.addr_rel & 0x80 <= -128):
-            print(self.addr_rel, 'to dentro do IF')
             self.addr_rel |= 0xFF00
         return 0
 
     def ABS(self):
-        print('ABS')
         low = self.read(self.pc)
         self.pc += 1
         high = self.read(self.pc)
@@ -278,7 +277,6 @@ class CPU:
     #INSTRUCTIONS
 
     def fetch(self):
-        print(self.lookup[self.opcode]['ADDR'] != self.IMP)
         if(self.lookup[self.opcode]['ADDR'] != self.IMP):
             self.fetched = self.read(self.addr_abs)
         return self.fetched
@@ -286,7 +284,6 @@ class CPU:
 
 
     def ADC(self):
-        print('ADC')
         self.fetch()
         temp = self.a + self.fetched + self.getFlag('C')
         self.setFlag('C', temp > 255)
@@ -316,7 +313,6 @@ class CPU:
 
     #VER O ADDR
     def ASL(self):
-        print('ASL')
         self.fetch()
         temp = self.fetched << 1
         self.setFlag('C', (temp & 0xFF00) > 0)
@@ -326,7 +322,6 @@ class CPU:
             self.a = temp & 0x00FF
         else:
             self.write(self.addr_abs, temp & 0x00FF)
-            print('passei aqui')
         return 0
     
     def BCC(self):
@@ -381,7 +376,6 @@ class CPU:
         return 0
 
     def BNE(self):
-        print('BNE')
         # if(self.getFlag('Z') == 0):
         #     self.cycles += 1
         #     print(self.addr_abs, 'to aqui BNE')
@@ -395,8 +389,6 @@ class CPU:
 
         if(self.getFlag('Z') == 0):
             self.cycles += 1
-            print(self.bus.ram[self.addr_abs], self.bus.ram[self.addr_rel])
-            print(self.addr_rel, 'to aqui BNE')
             self.addr_abs = self.pc + self.addr_rel
 
             if ((self.addr_abs & 0xFF00) != (self.pc & 0xFF00)):
@@ -459,7 +451,6 @@ class CPU:
         return 0
 
     def CLD(self):
-        print('CLD')
         self.setFlag('D', False)
         return 0
 
@@ -512,7 +503,6 @@ class CPU:
 
     def DEY(self):
         self.y -= 1
-        print('Y', self.y)
         self.setFlag('N', self.y & 0x80)
         self.setFlag('Z', self.y == 0x00)
 
@@ -560,7 +550,6 @@ class CPU:
         return 0
         
     def LDA(self):
-        print('LDA')
         self.fetch()
         self.a = self.fetched
         self.setFlag('Z', self.a == 0x00)
@@ -568,16 +557,13 @@ class CPU:
         return 1
 
     def LDX(self):
-        print('LDX')
         self.fetch()
         self.x = self.fetched
-        print(self.x)
         self.setFlag('Z', self.x == 0x00)
         self.setFlag('N', self.x & 0x80)
         return 1
 
     def LDY(self):
-        print('LDY')
         self.fetch()
         self.y = self.fetched
         self.setFlag('Z', self.y == 0x00)
@@ -694,7 +680,6 @@ class CPU:
         return 0
 
     def SEI(self):
-        print('SEI')
         self.setFlag('I', True)
         return 0
 
@@ -703,7 +688,6 @@ class CPU:
         return 0
 
     def STX(self):
-        print('STX')
         self.write(self.addr_abs, self.x)
         return 0
 
@@ -809,7 +793,3 @@ class CPU:
 
     # def run(self):
     #     self.clock()
-
-
-
-

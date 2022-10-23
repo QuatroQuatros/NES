@@ -51,8 +51,8 @@ class Cartucho:
             print(self.name[0:3], self.prg_rom_chunks, self.chr_rom_chunks, self.mapper1, self.mapper2)
             input()
 
-            if(self.mapper1 & 0x04 != 0):
-                print('to aqui')
+
+
 
             #Mapper ID
             self.nMapperId = ((self.mapper2 >> 4) << 4) | (self.mapper1 >> 4)
@@ -60,6 +60,7 @@ class Cartucho:
             if(self.mapper1 & 0x01 == 1):
                 self.mirror = self.mirrors[1]
 
+            self.trainer = (self.mapper1 & 0x04 != 0)
                 
 
             #File format
@@ -69,6 +70,9 @@ class Cartucho:
                 pass
 
             elif(self.nFileType == 1):
+                start = 0x10 + (0x200 * self.trainer)
+                end = start + (0x4000 * self.prg_rom_chunks)
+                memory_pointer = 0x8000
 
                 self.nPRGBanks = self.prg_rom_chunks
                 self.vPRGMemory = [0] * (self.nPRGBanks * 16384)
@@ -99,13 +103,27 @@ class Cartucho:
     def imageValid(self):
         return self.bImageValid
 
+    # def cpu_read(self, addr, data):
+    #     mapped_addr = 0
+
+    #     if(self.mapper.cpu_map_read(addr, mapped_addr)):
+    #         print('MEMORIA', hex(self.vPRGMemory[0x3FFC]), hex(self.vPRGMemory[0x3FFD]))
+    #         input()
+    #         data = self.vPRGMemory[mapped_addr]
+    #         print('cartucho', hex(addr), hex(data))
+    #         return True
+    #     else:
+    #         return False
+
+
     def cpu_read(self, addr, data):
         mapped_addr = 0
-        print('cartucho', addr, data)
-        if(self.mapper.cpu_map_read(addr, mapped_addr)):
+        mapped_addr = self.mapper.cpu_map_read(addr, mapped_addr)
+        print('cartucho', addr, data, mapped_addr)
+        if( mapped_addr != False):
             data = self.vPRGMemory[mapped_addr]
-            print('cartucho 2', addr, data)
-            return True
+            print('cartucho 2', hex(addr), hex(data))
+            return data
         else:
             return False
 
