@@ -28,7 +28,20 @@ class BUS:
         self.system_clock_counter = 0
         self.cpu.reset()
 
+    def cpu_read(self, addr, readonly = False):
+        data = 0x00
+        if addr >= 0x0000 and addr <= 0x1FFF:
+            data = self.cpu_ram[addr & 0x07FF]
 
+        elif (addr >= 0x2000 and addr <= 0x3FFF):
+            data = self.ppu.cpu_read(addr & 0x0007, readonly)
+
+        else:
+            data = self.cartucho.cpu_read(addr, data)
+        return data
+
+
+        
     def cpu_write(self, addr, data):
         if(self.cartucho.cpu_write(addr, data)):
             pass
@@ -39,33 +52,37 @@ class BUS:
         elif (addr >= 0x2000 and addr <= 0x3FFF):
             self.ppu.cpu_write(addr & 0x0007, data)
 
-    def cpu_read(self, addr, readonly = False):
-        data = 0x00
-        print('bus', hex(addr))
 
-        if(self.cartucho.cpu_read(addr, data)):
-            pass
-
-        elif addr >= 0x0000 and addr <= 0x1FFF:
-            data = self.cpu_ram[addr & 0x07FF]
-
-        elif (addr >= 0x2000 and addr <= 0x3FFF):
-            data = self.ppu.cpu_read(addr & 0x0007, readonly)
-
-        return data
 
     # def cpu_read(self, addr, readonly = False):
     #     data = 0x00
-    #     print('bus', addr)
-    #     if addr >= 0x0000 and addr <= 0x1FFF:
+    #     print('bus', hex(addr))
+
+    #     if(self.cartucho.cpu_read(addr, data)):
+    #         print('to aqui')
+
+    #     elif addr >= 0x0000 and addr <= 0x1FFF:
     #         data = self.cpu_ram[addr & 0x07FF]
 
     #     elif (addr >= 0x2000 and addr <= 0x3FFF):
     #         data = self.ppu.cpu_read(addr & 0x0007, readonly)
 
-    #     else:
-    #         data = self.cartucho.cpu_read(addr, data)
+    #     print('addr e data =',addr, data)
+    #     input()
     #     return data
+
+    
+    # def cpu_write(self, addr, data):
+    #     if(self.cartucho.cpu_write(addr, data)):
+    #         pass
+
+    #     elif addr >= 0x0000 and addr <= 0x1FFF:
+    #         self.cpu_ram[addr & 0x07FF] = data
+
+    #     elif (addr >= 0x2000 and addr <= 0x3FFF):
+    #         self.ppu.cpu_write(addr & 0x0007, data)
+
+
         
     def clock(self):
         self.ppu.clock()

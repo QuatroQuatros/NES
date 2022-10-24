@@ -1,4 +1,5 @@
 import pygame
+from tile import Tile
 from random import randint
 from pygame import gfxdraw
 
@@ -7,7 +8,7 @@ class PPU:
         pygame.init()
         pygame.font.init()
         self.cartucho = cartucho
-        self.tbl_name = [[0]*1024, [0]*1024]
+        self.tblName = [[0]*1024, [0]*1024]
         self.tblPalette = [0] * 32
         self.tblPattern = [[0]*4096, [0]*4096]
         # self.tblPattern = [0] * 8192 #isso n é necessario
@@ -15,6 +16,7 @@ class PPU:
         self.frame_complete = False
         self.scanline = 0
         self.cycle = 0
+
 
         #status
         self.unused = 5
@@ -46,11 +48,50 @@ class PPU:
         self.slave_mode = 1 # unused
         self.enable_nmi = 1
         self.control_reg = 0
-        
 
         self.addr_latch = 0x00
         self.ppu_data_buffer = 0x00
         self.ppu_addr = 0x0000
+
+        #loop Register
+        self.loop = {
+            "coarse_x": 5,
+            "coarse_y": 5,
+            "nametable_x": 1,
+            "nametable_y": 1,
+            "fine_y": 3,
+            "unused": 1,
+            "reg": 0x0000,
+        }
+
+        self.vram_addr = self.loop
+        self.tram_addr = self.loop
+
+
+        self.fine_x = 0x00
+
+        self.bg_next_tile_id     = 0x00
+        self.bg_next_tile_attrib = 0x00
+        self.bg_next_tile_lsb    = 0x00
+        self.bg_next_tile_msb    = 0x00
+
+
+        self.bg_shifter_pattern_lo = 0x0000
+        self.bg_shifter_pattern_hi = 0x0000
+        self.bg_shifter_attrib_lo  = 0x0000
+        self.bg_shifter_attrib_hi  = 0x0000
+
+
+        # self.coarse_x = 5
+        # self.coarse_y = 5
+        # self.nametable_x = 1
+        # self.nametable_y = 1
+        # self.fine_y = 3
+        # self.unused = 1
+        # self.reg = 0x0000
+        
+
+
 
 
         self.palScreen = [0] * 64
@@ -69,6 +110,7 @@ class PPU:
         self.screen.fill((0,0,118), (341,0, 300, 240))
         pygame.display.set_caption('NES Emulator by 4.444')
         self.my_font = pygame.font.Font('PressStart2P.ttf', 10)
+        self.tiles = pygame.sprite.Group()
 
         pygame.display.flip()
 
@@ -168,7 +210,8 @@ class PPU:
         return self.sprPatternTable[i]
 
     def getColourFromPaletteRam(self, pallete, pixel):
-        return self.palScreen[self.ppu_read(0x3F00 + (pallete << 2) + pixel)]
+        return self.palScreen[self.ppu_read(0x3F00 + (pallete << 2) + pixel) & 0x3F]
+
 
     def clear(self):
         self.screen.fill((0,0,118), (341,0, 300, 230))
@@ -223,11 +266,17 @@ class PPU:
 
         elif(addr == 0x0007): #PPU data
             data = self.ppu_data_buffer
-            self.ppu_data_buffer = self.ppu_read(self.ppu_addr)
+            self.ppu_data_buffer = self.ppu_read(self.vram_addr.reg)
 
             if(self.ppu_addr > 0x3F00):
                 data = self.ppu_data_buffer
-            self.ppu_addr += 1
+
+            if self.increment_mode:
+                self.vram_addr.reg += 1
+            else:
+                self.ppu += 32
+            #     data = self.ppu_data_buffer
+            # self.ppu_addr += 1
 
 
         return data
@@ -235,6 +284,8 @@ class PPU:
     def cpu_write(self, addr, data):
         if(addr == 0x0000): #control
             self.control_reg = data
+            self.tram_addr['nametable_x'] = self.nametable_x
+            self.tram_addr['nametable_y'] = self.nametable_y
 
         elif(addr == 0x0001): #mask
             self.mask_reg = data
@@ -249,33 +300,106 @@ class PPU:
             pass
 
         elif(addr == 0x0005): #scroll
-            pass
+            if(self.addr_latch == 0):
+                self.fine_x = data & 0x07
+                self.tram_addr['coarse_x'] = data >> 3
+                self.addr_latch = 1
+            else:
+                self.tram_addr['fine_y'] = data & 0x07
+                self.tram_addr['coarse_y'] = data >> 3
+                self.addr_latch = 0
 
         elif(addr == 0x0006): #PPU addr
             if(self.addr_latch == 0):
-                self.ppu_addr =  (self.ppu_addr & 0x00FF) | (data << 8)
+                self.tram_addr['reg'] =  ((data & 0x003F) << 8) | (self.tram_addr['reg'] & 0x00FF)
                 
                 self.addr_latch = 1
             else:
-                self.ppu_addr =  (self.ppu_addr & 0xFF00) | data
+                self.tram_addr['reg'] =  (self.tram_addr['reg'] & 0xFF00) | data
+                self.vram_addr = self.tram_addr
                 self.addr_latch = 0
 
         elif(addr == 0x0007): #PPU data
-            self.ppu_write(self.ppu_addr, data)
-            self.ppu_addr += 1
+            self.ppu_write(self.vram_addr['reg'], data)
+            if self.increment_mode:
+                self.vram_addr['reg'] += 1
+            else:
+                self.ppu += 32
 
+
+    # def ppu_read(self, addr, readonly = False):
+    #     data = 0x00
+    #     addr &= 0x3FFF
+    #     if(self.cartucho.ppu_read(addr, data)):
+    #        pass
+
+    #     elif(addr >= 0x0000 and addr <= 0x1FFF):
+    #         data = self.tblPattern[((addr & 0x1000) >> 12)][addr & 0x0FFF]
+
+    #     elif(addr >= 0x2000 and addr <= 0x3EFF):
+    #         if(self.cartucho.mirror == 'VERTICAL'):
+
+    #             if (addr >= 0x0000 and addr <= 0x03FF):
+    #                 data = self.tblName[0][addr & 0x03FF] 
+    #             if (addr >= 0x0400 and addr <= 0x07FF):
+    #                 data = self.tblName[1][addr & 0x03FF] 
+    #             if (addr >= 0x0800 and addr <= 0x0BFF):
+    #                 data = self.tblName[0][addr & 0x03FF] 
+    #             if (addr >= 0x0C00 and addr <= 0x0FFF):
+    #                 data = self.tblName[1][addr & 0x03FF] 
+
+    #         elif(self.cartucho.mirror == 'HORIZONTAL'):
+
+    #             if (addr >= 0x0000 and addr <= 0x03FF):
+    #                 data = self.tblName[0][addr & 0x03FF] 
+    #             if (addr >= 0x0400 and addr <= 0x07FF):
+    #                 data = self.tblName[0][addr & 0x03FF] 
+    #             if (addr >= 0x0800 and addr <= 0x0BFF):
+    #                 data = self.tblName[1][addr & 0x03FF] 
+    #             if (addr >= 0x0C00 and addr <= 0x0FFF):
+    #                 data = self.tblName[1][addr & 0x03FF] 
+
+
+    #     elif(addr >= 0x3F00 and addr <= 0x3FFF):
+    #         addr &= 0x001F
+    #         if(addr == 0x0010): addr = 0x0000
+    #         if(addr == 0x0014): addr = 0x0004
+    #         if(addr == 0x0018): addr = 0x0008
+    #         if(addr == 0x001C): addr = 0x000C
+    #         data = self.tblPalette[addr]
+    #     return data
 
     def ppu_read(self, addr, readonly = False):
         data = 0x00
+        print(hex(addr))
         addr &= 0x3FFF
-        if(self.cartucho.ppu_read(addr, data)):
-           pass
 
-        elif(addr >= 0x0000 and addr <= 0x1FFF):
+        if(addr >= 0x0000 and addr <= 0x1FFF):
             data = self.tblPattern[((addr & 0x1000) >> 12)][addr & 0x0FFF]
 
         elif(addr >= 0x2000 and addr <= 0x3EFF):
-            pass
+            if(self.cartucho.mirror == 'VERTICAL'):
+
+                if (addr >= 0x0000 and addr <= 0x03FF):
+                    data = self.tblName[0][addr & 0x03FF] 
+                if (addr >= 0x0400 and addr <= 0x07FF):
+                    data = self.tblName[1][addr & 0x03FF] 
+                if (addr >= 0x0800 and addr <= 0x0BFF):
+                    data = self.tblName[0][addr & 0x03FF] 
+                if (addr >= 0x0C00 and addr <= 0x0FFF):
+                    data = self.tblName[1][addr & 0x03FF] 
+
+            elif(self.cartucho.mirror == 'HORIZONTAL'):
+
+                if (addr >= 0x0000 and addr <= 0x03FF):
+                    data = self.tblName[0][addr & 0x03FF] 
+                if (addr >= 0x0400 and addr <= 0x07FF):
+                    data = self.tblName[0][addr & 0x03FF] 
+                if (addr >= 0x0800 and addr <= 0x0BFF):
+                    data = self.tblName[1][addr & 0x03FF] 
+                if (addr >= 0x0C00 and addr <= 0x0FFF):
+                    data = self.tblName[1][addr & 0x03FF] 
+
 
         elif(addr >= 0x3F00 and addr <= 0x3FFF):
             addr &= 0x001F
@@ -284,6 +408,10 @@ class PPU:
             if(addr == 0x0018): addr = 0x0008
             if(addr == 0x001C): addr = 0x000C
             data = self.tblPalette[addr]
+
+        else:
+            data = self.cartucho.ppu_read(addr, data)
+
         return data
 
     def ppu_write(self, addr, data):
@@ -294,7 +422,27 @@ class PPU:
             self.tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF] = data
 
         elif(addr >= 0x2000 and addr <= 0x3EFF):
-            pass
+            if(self.cartucho.mirror == 'VERTICAL'):
+
+                if (addr >= 0x0000 and addr <= 0x03FF):
+                    self.tblName[0][addr & 0x03FF] = data
+                if (addr >= 0x0400 and addr <= 0x07FF):
+                    self.tblName[1][addr & 0x03FF] = data
+                if (addr >= 0x0800 and addr <= 0x0BFF):
+                    self.tblName[0][addr & 0x03FF] = data
+                if (addr >= 0x0C00 and addr <= 0x0FFF):
+                    self.tblName[1][addr & 0x03FF] = data
+                    
+            elif(self.cartucho.mirror == 'HORIZONTAL'):
+
+                if (addr >= 0x0000 and addr <= 0x03FF):
+                    self.tblName[0][addr & 0x03FF] = data
+                if (addr >= 0x0400 and addr <= 0x07FF):
+                    self.tblName[0][addr & 0x03FF] = data
+                if (addr >= 0x0800 and addr <= 0x0BFF):
+                    self.tblName[1][addr & 0x03FF] = data
+                if (addr >= 0x0C00 and addr <= 0x0FFF):
+                    self.tblName[1][addr & 0x03FF] = data
 
         elif(addr >= 0x3F00 and addr <= 0x3FFF):
             addr &= 0x001F
@@ -304,20 +452,167 @@ class PPU:
             if(addr == 0x001C): addr = 0x000C
             self.tblPalette[addr] = data
         addr &= 0x3FFF
+    
+    def IncrementScrollX(self):
+        if (self.render_background or self.render_sprites):
+            if (self.vram_addr['coarse_x'] == 31):
+                self.vram_addr['coarse_x'] = 0
+                self.vram_addr['nametable_x'] = ~self.vram_addr['nametable_x']
+            else:
+                self.vram_addr['coarse_x'] += 1
+    
+    def IncrementScrollY(self):
+        if (self.render_background or self.render_sprites):
+            if (self.vram_addr['fine_y'] < 7):
+                self.vram_addr['fine_y'] += 1
+                
+        else:
+            self.vram_addr['fine_y'] = 0
+            if (self.vram_addr['coarse_y'] == 29):
+                self.vram_addr['coarse_y'] = 0
+                self.vram_addr['nametable_y'] = ~self.vram_addr['nametable_y']
+
+            elif (self.vram_addr['coarse_y'] == 31):
+                self.vram_addr['coarse_y'] = 0
+
+            else:
+                self.vram_addr['coarse_y'] += 1
+
+
+
+    def TransferAddressX(self):
+        if (self.render_background or self.render_sprites):
+           self.vram_addr['nametable_x'] = self.tram_addr['nametable_x']
+           self.vram_addr['coarse_x']    = self.tram_addr['coarse_x']
+
+    def TransferAddressY(self):
+        if (self.render_background or self.render_sprites):
+            self.vram_addr['fine_y']      = self.tram_addr['fine_y']
+            self.vram_addr['nametable_y'] = self.tram_addr['nametable_y']
+            self.vram_addr['coarse_y']    = self.tram_addr['coarse_y']
+    
+    def LoadBackgroundShifters(self):
+        self.bg_shifter_pattern_lo = (self.bg_shifter_pattern_lo & 0xFF00) | self.bg_next_tile_lsb
+        self.bg_shifter_pattern_hi = (self.bg_shifter_pattern_hi & 0xFF00) | self.bg_next_tile_msb
+        
+        if(self.bg_shifter_attrib_lo & 0xFF00) | (self.bg_next_tile_attrib & 0b01):
+            self.bg_shifter_attrib_lo  = 0xFF
+        else:
+            self.bg_shifter_attrib_lo = 0x00
+
+        if(self.bg_shifter_attrib_hi & 0xFF00) | (self.bg_next_tile_attrib & 0b10):
+            self.bg_shifter_attrib_hi  = 0xFF
+        else:
+            self.bg_shifter_attrib_lo = 0x00
+            
+    def UpdateShifters(self):
+        
+        if (self.render_background):
+            self.bg_shifter_pattern_lo <<= 1
+            self.bg_shifter_pattern_hi <<= 1
+            self.bg_shifter_attrib_lo <<= 1
+            self.bg_shifter_attrib_hi <<= 1
+		
+	
 
     def clock(self):
 
-        if(self.scanline == -1 and self.cycle ==1):
-            self.vertical_blank = 0
+        if self.scanline >= -1 and self.scanline < 240:
+            if(self.scanline == -1 and self.cycle == 1):
+                self.vertical_blank = 0
 
-        if(self.scanline == 241 and self.cycle == 1):
-            self.vertical_blank = 1
-            if(self.enable_nmi):
-                self.nmi = True
+            if(self.cycle >= 2 and self.cycle < 258) or (self.cycle >= 321 and self.cycle < 338):
+                self.UpdateShifters()
 
-        gfxdraw.pixel(self.screen, self.cycle - 1, self.scanline, self.palScreen[(randint(0,64) % 2) if 0x3F else 0x30])
+                if((self.cycle -1) % 8) == 0:
+                    self.LoadBackgroundShifters()
+                    self.bg_next_tile_id = self.ppu_read(0x2000 | (self.vram_addr['reg'] & 0x0FFF))
+
+                elif((self.cycle -1) % 8) == 2:
+                    if (self.vram_addr['coarse_y'] & 0x02):
+                         self.bg_next_tile_attrib >>= 4
+                    
+                    if (self.vram_addr['coarse_x'] & 0x02): 
+                        self.bg_next_tile_attrib >>= 2
+                    self.bg_next_tile_attrib &= 0x03
+
+
+                elif((self.cycle -1) % 8) == 4:
+                    self.bg_next_tile_lsb = self.ppu_read((self.pattern_background << 12) + (self.bg_next_tile_id << 4) + (self.vram_addr['fine_y']) + 0)
+
+                elif((self.cycle -1) % 8) == 6:
+                    self.bg_next_tile_msb = self.ppu_read((self.pattern_background << 12) + (self.bg_next_tile_id << 4) + (self.vram_addr['fine_y']) + 8)
+
+                elif((self.cycle -1) % 8) == 7:
+                    self.IncrementScrollX()
+
+            if (self.cycle == 256):
+                self.IncrementScrollY()
+            
+            if (self.cycle == 257):
+                self.LoadBackgroundShifters()
+                self.TransferAddressX()
+        
+            if (self.cycle == 338 or self.cycle == 340):
+            
+                self.bg_next_tile_id = self.ppu_read(0x2000 | (self.vram_addr['reg'] & 0x0FFF))
+		
+
+            if(self.scanline == -1 and self.cycle >= 280 and self.cycle < 305):
+                self.TransferAddressY()
+		
+
+        if(self.scanline == 240):
+            pass
+
+        if (self.scanline >= 241 and self.scanline < 261):
+            if(self.scanline == 241 and self.cycle == 1):
+                self.vertical_blank = 1
+                if(self.enable_nmi):
+                    self.nmi = True
+
+        self.bg_pixel = 0x00
+        self.bg_palette = 0x00
+
+        if(self.render_background):
+            bit_mux = 0x8000 >> self.fine_x
+
+            p0_pixel = (self.bg_shifter_attrib_lo & bit_mux) > 0
+            p1_pixel = (self.bg_shifter_attrib_hi & bit_mux) > 0
+
+            self.bg_pixel = (p1_pixel << 1) | p0_pixel
+
+            
+            bg_pal0 = (self.bg_shifter_attrib_lo & bit_mux) > 0
+            bg_pal1 = (self.bg_shifter_attrib_hi & bit_mux) > 0
+
+            self.bg_palette = (bg_pal1 << 1) | bg_pal0
+
+
+        #make noise
+        # gfxdraw.pixel(self.screen, self.cycle - 1, self.scanline, self.palScreen[(randint(0,64) % 2) if 0x3F else 0x30])
+        gfxdraw.pixel(self.screen, self.cycle - 1, self.scanline, self.getColourFromPaletteRam(self.bg_palette, self.bg_pixel))
+        
+        # for y in range(30):
+        #     for x in range(32):
+        #         id = self.tblName[0][y * 32 + x]
+        #         tile = Tile((255,255,255),8, 8)
+        #         tile.rect.x = y*16
+        #         tile.rect.y = x*16
+        #         self.tiles.add(tile)
+
+
+                # self.clear()
+                # self.tblFont = pygame.font.Font('PressStart2P.ttf', 8)
+                # tbl = self.tblFont.render(hex(self.tblName[0][y*32+x]), False, (255, 255, 255))
+                # self.screen.blit(tbl, (x*16, y*16))
+
+                # pygame.draw.rect(tile, (255,255,255) [0,0,8,8])
+                # gfxdraw.pixel(self.screen, x*16, y*16, self.getPatternTable(0, self.nSelectedPalette))
+
+
+
         self.cycle += 1
-
         if(self.cycle >= 341): #256
             self.cycle = 0
             self.scanline += 1

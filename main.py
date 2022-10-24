@@ -10,11 +10,12 @@ from bus import BUS
 
 # rom = 'jogos/Castlevania.nes'
 #rom = 'jogos/teste.4444'
-#rom = 'jogos/DonkeyKong.nes'
-rom = 'jogos/SuperMarioBros.nes'
+rom = 'jogos/DonkeyKong.nes'
+#rom = 'jogos/SuperMarioBros.nes'
 #rom = 'jogos/cpu_dummy_reads.nes'
 bus = BUS(rom)
 
+clock = pygame.time.Clock()
 
 while bus.cpu.complete != 1:
     for event in pygame.event.get():
@@ -23,8 +24,11 @@ while bus.cpu.complete != 1:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 bus.incPalette()
-                pygame
-    bus.clock()
+
+    bus.ppu.tiles.draw(bus.ppu.screen)
+    clock.tick(60)
     pygame.display.flip()
+    bus.clock()
+
 
 

@@ -82,16 +82,17 @@ class CPU:
         self.stack = 0xFD
         self.status = (0x00 | self.flags['U'])
 
-        # self.addr_abs = 0xFFFC
-        # low = self.read(self.addr_abs + 0)
-        # high = self.read(self.addr_abs + 1)
+        self.addr_abs = 0xFFFC
+        low = self.read(self.addr_abs + 0)
+        high = self.read(self.addr_abs + 1)
 
+        #FC = 9E 
+        #FD = C7
+        #FE = F0
 
-        # self.pc = (high << 8) | low
-        # print(hex(self.pc), hex(low), hex(high))
-        # input()
+        self.pc = (high << 8) | low
 
-        self.pc = 0x8000
+        # self.pc = 0xC7E4
 
         self.addr_rel = 0x0000
         self.addr_abs = 0x0000
@@ -307,8 +308,8 @@ class CPU:
     def AND(self):
         self.fetch()
         self.a = self.a & self.fetched
-        self.SetFlag('Z', self.a == 0x00)
-        self.SetFlag('N', self.a == 0x80)
+        self.setFlag('Z', self.a == 0x00)
+        self.setFlag('N', self.a == 0x80)
         return 1
 
     #VER O ADDR
@@ -738,27 +739,27 @@ class CPU:
         if(self.cycles == 0):
             self.opcode = self.read(self.pc)
             self.setFlag('U', True)
+
+            # a = f'''
+            # -------------------
+            # Inicio
+            # STATUS: {hex(self.status)}
+            # PC: {hex(self.pc)}
+            # A: Hex:{hex(self.a)} Dec:{self.a}
+            # X: Hex:{hex(self.x)} Dec:{self.x}
+            # Y: Hex:{hex(self.y)} Dec:{self.y}
+            # STACK: {hex(self.stack)}
+            # ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
+            # ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
+            # MAPPER: {self.bus.cartucho.mapper.id}
+            # OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
+            # CYCLES: {self.cycles}
+            # ------------------
+            # '''
+            # print(a)
+            # input()
+
             self.pc += 1
-
-
-            a = f'''
-            -------------------
-            Inicio
-            STATUS: {hex(self.status)}
-            PC: {hex(self.pc)}
-            A: Hex:{hex(self.a)} Dec:{self.a}
-            X: Hex:{hex(self.x)} Dec:{self.x}
-            Y: Hex:{hex(self.y)} Dec:{self.y}
-            STACK: {hex(self.stack)}
-            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
-            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
-            MAPPER: {self.bus.cartucho.mapper.id}
-            OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
-            CYCLES: {self.cycles}
-            ------------------
-            '''
-            print(a)
-            input()
 
 
             self.cycles = self.lookup[self.opcode]['CYCLES']
@@ -766,24 +767,24 @@ class CPU:
             add_cycle2 = self.lookup[self.opcode]['OPCODE']()
             self.cycles += (add_cycle & add_cycle2)
             self.setFlag('U', True)
-            a = f'''
-            -------------------
-            resultado
-            STATUS: {hex(self.status)}
-            PC: {hex(self.pc)}
-            A: Hex:{hex(self.a)} Dec:{self.a}
-            X: Hex:{hex(self.x)} Dec:{self.x}
-            Y: Hex:{hex(self.y)} Dec:{self.y}
-            STACK: {hex(self.stack)}
-            ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
-            ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
-            MAPPER: {self.bus.cartucho.mapper.id}
-            OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
-            CYCLES: {self.cycles}
-            ------------------
-            '''
-            print(a)
-            input()
+            # a = f'''
+            # -------------------
+            # resultado
+            # STATUS: {hex(self.status)}
+            # PC: {hex(self.pc)}
+            # A: Hex:{hex(self.a)} Dec:{self.a}
+            # X: Hex:{hex(self.x)} Dec:{self.x}
+            # Y: Hex:{hex(self.y)} Dec:{self.y}
+            # STACK: {hex(self.stack)}
+            # ADDR_ABS: Hex:{hex(self.addr_abs)} Dec: {self.addr_abs}
+            # ADDR_REL: Hex:{hex(self.addr_rel)} Dec: {self.addr_rel}
+            # MAPPER: {self.bus.cartucho.mapper.id}
+            # OPCODE: Hex:{hex(self.opcode)} Dec:{self.opcode}
+            # CYCLES: {self.cycles}
+            # ------------------
+            # '''
+            # print(a)
+            # input()
 
             self.bus.draw(self.status, self.pc, self.a, self.x, self.y, self.stack, self.opcode)
 
